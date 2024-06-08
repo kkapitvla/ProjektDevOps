@@ -16,25 +16,38 @@ pipeline {
                 sh 'mvn package'
             }
         }
-        stage('Budowanie Docker Image') {
+        stage('Docker') {
             steps {
                 script {
                     docker.build("twoje-uzytkownik/app:${env.BUILD_ID}")
                 }
             }
         }
-        stage('Wdrożenie') {
+        stage('Wdrażanie') {
             steps {
                 script {
                     try {
                         sh 'docker-compose up -d'
                     } catch (Exception e) {
-                        echo 'Wdrożenie nie powiodło się, następuje cofnięcie do poprzedniej wersji...'
+                        echo 'Wdrażanie nieudane, powrót do poprzednich ustawień...'
                         sh 'docker-compose down'
                         throw e
                     }
                 }
             }
+        }
+    }
+    post {
+        always {
+            mail to: 'k.kapitula.063@studms.ug.edu.pl',
+                subject: "Pipeline ${currentBuild.fullDisplayName}",
+                body: "Status: ${currentBuild.currentResult}"
+        }
+        success {
+            echo 'Sukces!'
+        }
+        failure {
+            slackSend (color: '#FF0000', message: "Pipeline ${currentBuild.fullDisplayName} failed.")
         }
     }
 }
