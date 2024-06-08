@@ -1,24 +1,39 @@
 pipeline {
     agent any
     stages {
-        stage('Code Compilation') {
+        stage('Kompilacja kodu') {
             steps {
-                echo 'Compiling the code...'
+                sh 'mvn clean compile'
             }
         }
-        stage('Unit Testing') {
+        stage('Testowanie') {
             steps {
-                echo 'Running unit tests...'
+                sh 'mvn test'
             }
         }
-        stage('Package Application') {
+        stage('Aplikacja') {
             steps {
-                echo 'Packaging the application...'
+                sh 'mvn package'
             }
         }
-        stage('Deploy to Development') {
+        stage('Budowanie Docker Image') {
             steps {
-                echo 'Deploying application to the development environment...'
+                script {
+                    docker.build("twoje-uzytkownik/app:${env.BUILD_ID}")
+                }
+            }
+        }
+        stage('Wdrożenie') {
+            steps {
+                script {
+                    try {
+                        sh 'docker-compose up -d'
+                    } catch (Exception e) {
+                        echo 'Wdrożenie nie powiodło się, następuje cofnięcie do poprzedniej wersji...'
+                        sh 'docker-compose down'
+                        throw e
+                    }
+                }
             }
         }
     }
